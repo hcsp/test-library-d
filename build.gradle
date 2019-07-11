@@ -1,0 +1,99 @@
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+repositories {
+    mavenCentral()
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile 'com.github.hcsp:test-library-c:0.1'
+}
+
+task sync(type: Sync) {
+    from 'build/classes/java/main'
+    into 'target/classes'
+    mustRunAfter compileJava
+}
+
+test {
+    dependsOn sync
+    classpath = classpath + files("target/classes")
+    useJUnitPlatform()
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    archiveClassifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+javadoc {
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.github.hcsp'
+            artifactId = 'test-library-d'
+            version = '0.1'
+
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+
+            pom {
+                name = 'test-library-d'
+                description = 'A library for quiz'
+                url = 'https://github.com/hcsp/test-library-d'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'blindpirate'
+                        name = 'Bo Zhang'
+                        email = 'zhangbodut@gmail.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/hcsp/test-library-d.git'
+                    developerConnection = 'scm:git:git@github.com:hcsp/test-library-d.git'
+                    url = 'https://github.com/hcsp/test-library-d'
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            url = version.endsWith('SNAPSHOT') ? SNAPSHOT_REPOSITORY_URL : RELEASE_REPOSITORY_URL
+
+            authentication {
+                basic(BasicAuthentication) {
+                    credentials {
+                        username = NEXUS_USERNAME
+                        password = NEXUS_PASSWORD
+                    }
+                }
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
